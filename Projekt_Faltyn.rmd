@@ -1,0 +1,252 @@
+---
+title: "Projekt RPiSM"
+author: "Natalia Faltyn"
+date: "2023-01-13"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Projekt RPiSM
+
+**Projekt numer 2**
+
+## CZĘŚĆ 1
+
+**Zadanie 1. **
+
+Na podstawie pobranych danych oblicz dzienne, logarytmiczne stopy zwrotu akcji obu spółek. 
+Zaprezentuj je na wykresach.
+
+Wybrałam spółki z branży technologicznej. XTB zajmuje się usługami i rozwiązaniami technologicznymi w zakresie obrotu instrumentami finansowymi, natomiast DataWalk specjalizuje się w tworzeniu oprogramowania do analizy danych. 
+
+Wczytuję i *czyszczę* dane, dodaję dzienne, logarytmiczne stopy zwrotu akcji w kolumnie o nazwie *x*.
+```{r message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+library(ggplot2)
+library(dplyr)
+library(SciViews)
+```
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+dat <- read.csv(file = 'moneypl-1673652875329.csv', 
+                sep=",", 
+                header=TRUE)
+
+xtb <- read.csv(file = 'moneypl-1673652958637.csv', 
+                sep=",", 
+                header=TRUE)
+
+dat <- dat %>%
+  mutate(x=ln(Zamknięcie/Otwarcie))
+
+xtb <- xtb %>%
+  mutate(x=ln(Zamknięcie/Otwarcie))
+```
+
+**Wykres wartości stóp zwrotu akcji dla spółki DataWalk.**
+
+Zmiany są stosunkowo niewielkie- od -13.2% do 12.6%, co oznacza, że wartości logarytmicznej stopy zwrotu są zbliżone do wartości prostej stopy zwrotu netto.
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+ggplot(dat, aes(x=1:253, y=dat$x)) + 
+  geom_line(colour= "grey20") + 
+  stat_smooth(method = loess, 
+              se=FALSE, 
+              colour="darkred") +
+  labs(title = "Wykres dziennych, logarytmicznych stóp zwrotu akcji spółki DataWalk",
+            subtitle = "Dane dla roku 2022",
+            x = "Dzień roku",
+            y = "Wartość stopy zwrotu") +
+  theme_minimal() 
+```
+
+**Wykres wartości stóp zwrotu akcji dla spółki XTB.**
+
+W tym przypadku zmiany są również stosunkowo niewielkie- od -7.7% do 7%, co oznacza, że tutaj również wartości logarytmicznej stopy zwrotu są zbliżone do wartości prostej stopy zwrotu netto.
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+ggplot(xtb, aes(x=1:253, y=xtb$x)) + 
+  geom_line(colour= "grey20") + 
+  stat_smooth(method = loess, 
+              se=FALSE, 
+              colour="darkred") +
+  labs(title = "Wykres dziennych, logarytmicznych stóp zwrotu akcji spółki XTB",
+            subtitle = "Dane dla roku 2022",
+            x = "Dzień roku",
+            y = "Wartość stopy zwrotu") +
+  theme_minimal() 
+```
+ 
+  **2.** Dzieląc stopy zwrotu akcji na trzy grupy (dodatnie, ujemne, zerowe) zbadaj, za pomocą testu niezależności Pearsona, czy zachowanie cen akcji obu spółek jest niezależne. W celu przeprowadzenia testu skonstruuj odpowiednią tablicę wielodzielczą wymiaru 3x3.
+  
+  Aby utworzyć tablicę wielodzielczą 3x3 stworzyłam ramkę danych zbierającą informacje o stopach zwrotu akcji spółek DataWalk i XTB, nastepnie podzieliłam ją na 9 ramek danych, których rekordy zliczyłam i umieściłam w macierzy 3x3.
+```{r}
+
+dane<- data.frame(dat$x, xtb$x)
+minmin<- dane%>%
+  filter(dat.x<0, xtb.x<0)
+minzer<- dane%>%
+  filter(dat.x<0, xtb.x==0)
+minplus<- dane%>%
+  filter(dat.x<0, xtb.x>0)
+zermin<- dane%>%
+  filter(dat.x==0, xtb.x<0)
+zerzer<- dane%>%
+  filter(dat.x==0, xtb.x==0)
+zerplus<- dane%>%
+  filter(dat.x==0, xtb.x>0)
+plusmin<- dane%>%
+  filter(dat.x>0, xtb.x<0)
+pluszer<- dane%>%
+  filter(dat.x>0, xtb.x==0)
+plusplus<- dane%>%
+  filter(dat.x>0, xtb.x>0)
+
+tabela1<- c(nrow(minmin), nrow(minzer),nrow(minplus),nrow(zermin),nrow(zerzer),
+            nrow(zerplus),nrow(plusmin),nrow(pluszer),nrow(plusplus))
+
+tabela<- matrix(tabela1, 3, 3)
+colnames(tabela)<- c("dat_ujemne", "dat_zerowe", "dat_dodatnie")
+rownames(tabela)<- c("xtb_ujemne", "xtb_zerowe", "xtb_dodatnie")
+tabela
+
+```
+  **Test niezależności chi-kwadrat Pearsona**
+
+Hipoteza zerowa:
+$$
+\begin{aligned}
+ H_0: cechy \space są \space niezależne
+\end{aligned}
+$$
+
+Hipoteza alternatywna:
+$$
+\begin{aligned}
+ H_1: cechy \space są \space zależne
+\end{aligned}
+$$
+```{r}
+chisq.test(tabela)
+
+```
+  Otrzymujemy p-value znacznie mniejsze od poziomu istotności o wartości 0,05, na podstawie czego możemy odrzucić hipotezę zerową i stwierdzić, że zmienne są od siebie zależne. 
+  
+  
+  
+  **3.** Przyjmując poziom istotności 0,05, za pomocą odpowiedniego testu sprawdź, czy na podstawie posiadanych danych można uznać, że
+  
+    a) wartość oczekiwana rozkładu dziennych stóp zwrotu akcji jest jednakowa dla obu spółek,
+    
+    b) odchylenie standardowe w rozkładzie dziennych stóp zwrotu akcji jest jednakowe dla obu
+    spółek,
+    
+    c) odsetek dni, w których następuje wzrost cen akcji (dzienna stopa zwrotu jest dodatnia) jest
+    w przypadku jednej ze spółek istotnie wyższy niż w przypadku drugiej.
+
+**a)** Aby sprawdzić, czy wartość oczekiwana rozkładu dziennych stóp zwrotu akcji jest jednakowa dla obu spółek, można użyć testu t-studenta dla dwóch grup. W tym celu należy porównać średnie wartości oczekiwane dla każdej z nich. Do tego testu użyję testu t.test().
+
+Hipoteza zerowa:
+$$
+\begin{aligned}
+ H_0: p_1 \space = \space p_2
+\end{aligned}
+$$
+
+Hipoteza alternatywna:
+$$
+\begin{aligned}
+ H_1: p_1 \space =/= \space p_2 
+\end{aligned}
+$$
+```{r}
+t.test(dat$x,xtb$x,alternative = "two.sided",conf.level = 0.95)
+```
+Wartość t-Statystyki równa -2.5697 pokazuje, jak bardzo różni się wartość oczekiwana rozkładu stóp zwrotu akcji spółki dat od rozkładu stóp zwrotu akcji spółki xtb. Ujemna wartość wskazuje na to, że wartość dat jest mniejsza niż wartość xtb. Wartość p-value równy 0.01054 jest mniejszy od poziomu istotności o wartości 0.05, dlatego można odrzucić hipotezę zerową, wartości oczekiwane obu spółek są różne. 
+
+**b)** Aby sprawdzić, czy odchylenie standardowe w rozkładzie dziennych stóp zwrotu akcji jest jednakowe dla obu spółek, można użyć testu Levana, który porównuje odchylenie standardowe dla dwóch grup. Do tego testu użyję funkcji var.test().
+
+Hipoteza zerowa:
+$$
+\begin{aligned}
+ H_0: p_1 \space = \space p_2
+\end{aligned}
+$$
+
+Hipoteza alternatywna:
+$$
+\begin{aligned}
+ H_1: p_1 \space =/= \space p_2 
+\end{aligned}
+$$
+```{r}
+library(EnvStats)
+```
+
+```{r}
+var.test(dat$x,xtb$x,alternative = "two.sided")
+```
+W tym teście wzięto pod uwagę 252 wartości z obu spółek. Wielkość F równa 3.1731 wskazuje na to, że zmienne w rozkładzie dziennych stóp zwortu akcji jest bardzo podobne do siebie. Natomiast bardzo mała wartość p-value równa 2.2e-16 która jest liczbą mniejszą od poziomu istotności o wartości 0,05. Oznacza to, że można odrzucić hipotezę zerową, że odchylenie standardowe dla dwóch spółek jest takie same.
+
+**c)** Aby sprawdzić, czy odsetek dni z wzrostem cen akcji jest istotnie wyższy dla jednej ze spółek, można użyć testu proporcji, które porównują proporcje dni z wzrostem cen akcji dla dwóch grup. Do tego testu użyję funkcji prop.test().
+
+Hipoteza zerowa:
+$$
+\begin{aligned}
+ H_0: p_1 \space = \space p_2
+\end{aligned}
+$$
+
+Hipoteza alternatywna:
+$$
+\begin{aligned}
+ H_1: p_1 \space > \space p_2 \space lub \space p_1 \space < \space p_2
+\end{aligned}
+$$
+```{r}
+prop.test(c(sum(dat$x>0),sum(xtb$x>0)),c(length(dat$x),length(xtb$x)))
+```
+Z testu proporcji badanych odsetek dni, w którym następuje wzrost cen akcji, p-value wynosi 0.003051, wynik jest mniejszy od poziomu istotności o wartości 0.05. Oznacza to, że istnieje istotna różnica między odsetkiem dni z wzrostem cen akcji dla dwóch spółek. W związku z tym można stwierdzić, że odsetek dni z wzrostem cen akcji jest istotnie różny dla obu spółek i można odrzucić hipotezę zerową. Odsetek dni z wzrostem cen akcji dla pierwszej spółki wynosi około 0.36, natomiast dla drugiej spółki wynosi około 0.49. Oznacza to, że w przypadku drugiej spółki, występuje wyższy odsetek dni z wzrostem cen akcji niż w przypadku pierwszej spółki, co potwierdza wynik testu.
+
+## CZĘŚĆ 2
+
+**Problem 2. z zestawu 1.**
+
+Dotyczył rozwiązania problemu Monty Halla z wykorzystanie symulacji Monte Carlo. 
+
+Na początku tworzony jest wektor *bramki* zawierający trzy numery bramek. Kolejny wektor tworzony jest w celu przechowywania w nim danych dostarczanych przez kolejne przejścia pętli.
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+bramki<-c("1", "2", "3")
+x <- c()
+```
+
+Funkcja *monty* zadaną ilość razy dokonuje wylosowania jednej z trzech bramek, tej za którą znajduje się nagroda, i umieszczenia jej w zmiennej nazwanej *nagroda*. Następnie w tej sam sposób losowana jest bramka, którą wybiera uczestnik gry, zapisywana jest jako *wybrana*. Następnie jako *otwarta* zapisywana jest bramka, za którą nie znajduje się nagroda, a także która nie została wybrana przez uczestnika gry. Wybierana jest tylko jedna bramka, nawet jeżeli gracz wybrał bramkę za którą znajdowała się nagroda- zapewnia to umieszczenie *[1]* na końcu komendy. Losowana jest także bramka, na którą potencjalnie gracz może wymienić wybraną przez siebie bramkę. Podczas tego wyboru odrzucana jest możliwość ponownego wyboru tej samej bramki, a także wyboru otworzonej przez prowadzącego bramki.
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+monty <- function(n) {
+for(i in 1:n)
+{
+  nagroda<-sample(bramki)[1]
+  wybrana<-sample(bramki)[1]
+  otwarta<-sample(bramki[which(bramki != wybrana & bramki != nagroda)])[1]
+  zamieniona<-bramki[which(bramki != wybrana & bramki != otwarta)]
+  if(wybrana==nagroda)(x=c(x,"niezamieniona"))
+  if(zamieniona==nagroda)(x=c(x,"zamieniona"))
+}
+
+cat("Liczba razy, kiedy wygrała osoba, która zmieniła bramkę: ", length(which(x=="zamieniona")), "\n")
+cat("Liczba razy, kiedy wygrała osoba, która nie dokonała zmiany: ", length(which(x=="niezamieniona")))
+
+}
+```
+
+W ostatnim etapie pętli sprawdzane jest czy nagroda znajduje się za pierwszą wybraną przez uczestnika bramką, czy za tą, na którą mogła zostać zamieniona. Jeżeli nagroda była za *wybraną* bramką do wektora x dopisywany jest wyraz *niezamieniona*, jeżeli natomiast nagroda znajdywałaby się za bramką *zamienioną* do x dopisujemy *zamieniona*. Instrukcja *length* zlicza wystąpienia poszczególnych wyrazów w wektorze x. Wynik symulacji wypisywany jest za pomocą funkcji *cat*.
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+monty(1000)
+```
+
+Wyniki symulacji jednoznaczne wskazują, że lepszym wyborem była zamiana wybranej za pierwszym razem bramki.
